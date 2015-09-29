@@ -15,8 +15,7 @@ Right now, rendered images are stored to the camera roll of the simulator/device
 
 Below are two example screenshots
 
-<img src="https://raw.github.com/christopherhelf/TouchHeatmap/master/Images/screen1.png" width="400">
-<img src="https://raw.github.com/christopherhelf/TouchHeatmap/master/Images/screen2.png" width="400">
+![screen1](https://raw.github.com/christopherhelf/TouchHeatmap/master/Images/screen1.png "Screenshot 1") ![screen2](https://raw.github.com/christopherhelf/TouchHeatmap/master/Images/screen2.png "Screenshot 2")
 
 
 
