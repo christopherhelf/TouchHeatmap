@@ -11,7 +11,7 @@ func application(application: UIApplication, didFinishLaunchingWithOptions launc
 }
 ```
 
-Right now, rendered images are stored to the camera roll of the simulator/device when the app is put into background. This could also be replaced by a function to send it to a remote REST api for instance. This implementation hooks into UIApplication and UIViewController and overwrites the ```sendEvent``` and ```viewDidAppear``` method in order to track touches and notify the TouchHeatmap object when a new screenshot is necessary. It also tracks which controllers are opened in terms of sequence, although there is currently no visualization of this feature.
+Right now, rendered images are stored to the camera roll of the simulator/device when the app is put into background. This could also be replaced by a function to send it to a remote REST api for instance. This implementation hooks into UIApplication and UIViewController and overwrites the ```sendEvent``` and ```viewDidAppear``` method in order to track touches and notify the TouchHeatmap object when a new screenshot is necessary. It also tracks which controllers are opened in terms of sequence, although there is currently no visualization of this feature. Furthermore, right now screens that have no touches are not rendered to the camera roll.
 
 This project was meant as a test and might contain bugs etc., as it is not actively maintained. Please use at your own risk. 
 
