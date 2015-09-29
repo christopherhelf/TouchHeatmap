@@ -6,15 +6,15 @@ All you have to do is call a static function of the TouchHeatmap object
 
 ```swift
 func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {
-        TouchHeatmap.start()
-        return true
-    }
+    TouchHeatmap.start()
+    return true
+}
 ```
 
 Below are two example screenshots
 
-![Screenshot 1](https://raw.github.com/christopherhelf/TouchHeatmap/master/Images/screen1.png)
-![Screenshot 2](https://raw.github.com/christopherhelf/TouchHeatmap/master/Images/screen2.png)
+<img src="https://raw.github.com/christopherhelf/TouchHeatmap/master/Images/screen1.png" width="400">
+<img src="https://raw.github.com/christopherhelf/TouchHeatmap/master/Images/screen2.png" width="400">
 
 
 
