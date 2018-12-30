@@ -18,19 +18,41 @@ UIApplication, which is however harder for users to setup
 
 */
 
+public protocol SwizzlingInjection: class {
+    static func inject()
+}
+
+class SwizzlingHelper {
+    
+    private static let doOnce: Any? = {
+        UIViewController.inject()
+        return nil
+    }()
+    
+    static func enableInjection() {
+        _ = SwizzlingHelper.doOnce
+    }
+}
+
 extension UIApplication {
+    
+    override open var next: UIResponder? {
+        // Called before applicationDidFinishLaunching
+        SwizzlingHelper.enableInjection()
+        return super.next
+    }
     
     // Here we exchange the implementations
     func swizzleSendEvent() {
-        let original = class_getInstanceMethod(object_getClass(self), Selector("sendEvent:"))
-        let swizzled = class_getInstanceMethod(object_getClass(self), Selector("sendEventTracked:"))
-        method_exchangeImplementations(original, swizzled);
+        let original = class_getInstanceMethod(object_getClass(self), #selector(UIApplication.sendEvent(_:)))
+        let swizzled = class_getInstanceMethod(object_getClass(self), #selector(self.sendEventTracked(_:)))
+        method_exchangeImplementations(original!, swizzled!);
     }
     
     // The new method, where we also send touch events to the TouchHeatmap Singleton
-    func sendEventTracked(event: UIEvent) {
+    @objc func sendEventTracked(_ event: UIEvent) {
         self.sendEventTracked(event)
-        TouchHeatmap.sharedInstance.sendEvent(event)
+        TouchHeatmap.sharedInstance.sendEvent(event: event)
     }
 }
 
@@ -45,7 +67,28 @@ tracked more easily
 
 */
 
-extension UIViewController {
+extension UIViewController : SwizzlingInjection {
+    // Reference for deprecates UIViewController initialize()
+    // https://stackoverflow.com/questions/42824541/swift-3-1-deprecates-initialize-how-can-i-achieve-the-same-thing/42824542#_=_
+    
+    public static func inject() {
+        // make sure this isn't a subclass
+        guard self === UIViewController.self else { return }
+        
+        let originalSelector = #selector(UIViewController.viewDidAppear(_:))
+        let swizzledSelector = #selector(viewDidAppearTracked(_:))
+
+        let originalMethod = class_getInstanceMethod(self, originalSelector)
+        let swizzledMethod = class_getInstanceMethod(self, swizzledSelector)
+        
+        let didAddMethod = class_addMethod(self, originalSelector, method_getImplementation(swizzledMethod!), method_getTypeEncoding(swizzledMethod!))
+        
+        if didAddMethod {
+            class_replaceMethod(self, swizzledSelector, method_getImplementation(originalMethod!), method_getTypeEncoding(originalMethod!))
+        } else {
+            method_exchangeImplementations(originalMethod!, swizzledMethod!);
+        }
+    }
     
     // The struct we storing for the controller's name
     private struct AssociatedKeys {
@@ -58,7 +101,7 @@ extension UIViewController {
             if let name = objc_getAssociatedObject(self, &AssociatedKeys.DescriptiveName) as? String {
                 return name
             } else {
-                return "\(self)"
+                return String.init(describing: self.classForCoder)
             }
         }
         set {
@@ -71,45 +114,11 @@ extension UIViewController {
         }
     }
     
-    // Override of the initialization function
-    public override class func initialize() {
-        
-        struct Static {
-            static var token: dispatch_once_t = 0
-        }
-        
-        // make sure this isn't a subclass
-        if self !== UIViewController.self {
-            return
-        }
-        
-        // Make sure the swizzle is only done once
-        dispatch_once(&Static.token) {
-            
-            let originalSelector = Selector("viewDidAppear:")
-            let swizzledSelector = Selector("viewDidAppearTracked:")
-            
-            let originalMethod = class_getInstanceMethod(self, originalSelector)
-            let swizzledMethod = class_getInstanceMethod(self, swizzledSelector)
-            
-            let didAddMethod = class_addMethod(self, originalSelector, method_getImplementation(swizzledMethod), method_getTypeEncoding(swizzledMethod))
-            
-            if didAddMethod {
-                class_replaceMethod(self, swizzledSelector, method_getImplementation(originalMethod), method_getTypeEncoding(originalMethod))
-            } else {
-                method_exchangeImplementations(originalMethod, swizzledMethod);
-            }
-            
-        }
-    }
-    
     // The method where we are tracking
-    func viewDidAppearTracked(animated: Bool) {
+    @objc func viewDidAppearTracked(_ animated: Bool) {
         self.viewDidAppearTracked(animated)
-        TouchHeatmap.sharedInstance.viewDidAppear(self.touchHeatmapKey)
+        TouchHeatmap.sharedInstance.viewDidAppear(name: self.touchHeatmapKey)
     }
-    
-    
     
 }
 

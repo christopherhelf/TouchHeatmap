@@ -60,7 +60,7 @@ final class TouchHeatmap : NSObject {
     static let sharedInstance = TouchHeatmap()
     
     // The queue in which we operate
-    let backgroundQueue = dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)
+    let backgroundQueue = DispatchQueue.global(qos: .background)
     
     // The error message which is given (unused yet)
     let errorMessage = "Did not Set UIApplication correctly"
@@ -80,15 +80,16 @@ final class TouchHeatmap : NSObject {
         super.init()
         
         // We will render the TouchHeatmap when entering into background
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: Selector("didEnterBackground:"), name:UIApplicationDidEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(didEnterBackground(_:)), name:UIApplication.didEnterBackgroundNotification, object: nil)
         
         // Set the size
-        size = UIApplication.sharedApplication().keyWindow!.layer.frame
+        size = UIApplication.shared.keyWindow!.layer.frame
     }
     
     // Main Entry Point
     class func start() {
-        UIApplication.sharedApplication().swizzleSendEvent()
+        _ = UIApplication.shared.next
+        UIApplication.shared.swizzleSendEvent()
     }
     
     // Function to keep things synchronized between threads
@@ -102,7 +103,7 @@ final class TouchHeatmap : NSObject {
     func sendEvent(event: UIEvent) {
         
         // We need touches in order to continue, as well as a viewcontroller
-        guard let touches = event.allTouches(), let name = self.currentController else {
+        guard let touches = event.allTouches, let name = self.currentController else {
             return
         }
         
@@ -118,12 +119,12 @@ final class TouchHeatmap : NSObject {
             let phase = touch.phase
             
             // Right now we simply track all touches
-            if (phase == UITouchPhase.Ended || true) {
+            if (phase == UITouch.Phase.ended || true) {
                 
                 // Enter the sync block
                 self.sync {
                     // Get the touch location in the current view
-                    let point = touch.locationInView(touch.window)
+                    let point = touch.location(in: touch.window)
                     // Create our own Touch object
                     let newTouch = Touch(point: point, date: NSDate(), majorRadius: touch.majorRadius, majorRadiusTolerance: touch.majorRadiusTolerance)
                     // Store this touch
@@ -138,13 +139,13 @@ final class TouchHeatmap : NSObject {
     func viewDidAppear(name: String) {
         
         // Check whether a screenshot is necessary
-        var screenshotNecessary = false
+        var screenshotNecessary = true
         
         sync {
             
             guard let item = self.store[name] else {
                 self.store[name] = TouchTracking()
-                self.store[name]!.addFrom(self.currentController)
+                self.store[name]!.addFrom(name: self.currentController)
                 screenshotNecessary = true
                 self.currentController = name
                 return
@@ -152,7 +153,7 @@ final class TouchHeatmap : NSObject {
             
             // Assign the current viewController
             self.currentController = name
-            self.store[name]!.addFrom(self.currentController)
+            self.store[name]!.addFrom(name: self.currentController)
             
             guard let _ = item.screenshot else {
                 screenshotNecessary = true
@@ -163,8 +164,8 @@ final class TouchHeatmap : NSObject {
         
         // Screenshot is necessary, make one
         if screenshotNecessary {
-            dispatch_async(backgroundQueue) {
-                self.makeScreenshot(name)
+            backgroundQueue.async() {
+                self.makeScreenshot(name: name)
             }
         }
         
@@ -172,29 +173,29 @@ final class TouchHeatmap : NSObject {
     
     // Function creating a screenshot, and assigning it to our store dictionary
     func makeScreenshot(name: String) {
-        
-        let layer = UIApplication.sharedApplication().keyWindow!.layer
-        let scale = UIScreen.mainScreen().scale
-        UIGraphicsBeginImageContextWithOptions(layer.frame.size, false, scale);
-        
-        layer.renderInContext(UIGraphicsGetCurrentContext()!)
-        let screenshot = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        
-        sync {
-            // Store the Screenshot
-            self.store[name]?.screenshot = screenshot
+        DispatchQueue.main.async {
+            let layer = UIApplication.shared.keyWindow!.layer
+            let scale = UIScreen.main.scale
+            UIGraphicsBeginImageContextWithOptions(layer.frame.size, false, scale);
+            
+            layer.render(in: UIGraphicsGetCurrentContext()!)
+            let screenshot = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            
+            self.sync {
+                // Store the Screenshot
+                self.store[name]?.screenshot = screenshot
+            }
         }
-        
     }
     
     // Render the touches and save to camera roll
-    func didEnterBackground(notification: NSNotification) {
+    @objc func didEnterBackground(_ notification: NSNotification) {
     
         for (_,item) in self.store{
             let screenshot = item.screenshot
             let touches = item.storedTouches
-            if let image = createImageFromTouches(screenshot!, touches: touches) {
+            if let image = createImageFromTouches(image: screenshot!, touches: touches) {
                 UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
             }
         }
@@ -204,18 +205,19 @@ final class TouchHeatmap : NSObject {
     // Render the touchmap and blend it with the screenshot
     func createImageFromTouches(image: UIImage, touches: [Touch]) -> UIImage? {
         
-        let result = TouchHeatmapRenderer.renderTouches(image, touches: touches)
+        let result = TouchHeatmapRenderer.renderTouches(image: image, touches: touches)
         let touchImage = result.0
         let success = result.1
         
         if success {
             // A touch heatmap was rendered, blend it with the screenshot
             let size = image.size
-            let rect = CGRectMake(0,0,size.width,size.height)
-            let scale = UIScreen.mainScreen().scale
+            let rect =  CGRect(origin: CGPoint(x: 0, y :0), size: CGSize(width: size.width, height: size.height))
+            
+            let scale = UIScreen.main.scale
             UIGraphicsBeginImageContextWithOptions(size, false, scale);
-            image.drawInRect(rect)
-            touchImage.drawInRect(rect, blendMode: CGBlendMode.Normal, alpha: 1.0)
+            image.draw(in: rect)
+            touchImage.draw(in: rect, blendMode: CGBlendMode.normal, alpha: 1.0)
             let renderedImage = UIGraphicsGetImageFromCurrentImageContext()
             UIGraphicsEndImageContext();
             return renderedImage
@@ -224,7 +226,6 @@ final class TouchHeatmap : NSObject {
             // a screenshot
             return nil
         }
-        
     }
-    
+
 }

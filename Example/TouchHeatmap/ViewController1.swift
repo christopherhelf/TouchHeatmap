@@ -12,8 +12,8 @@ class ViewController1: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.view.backgroundColor = UIColor.grayColor()
-        let tap = UITapGestureRecognizer(target: self, action: Selector("tap:"))
+        self.view.backgroundColor = UIColor.gray
+        let tap = UITapGestureRecognizer(target: self, action: #selector(tap(_:)))
         self.view.addGestureRecognizer(tap)
     }
 
@@ -22,7 +22,7 @@ class ViewController1: UIViewController {
         // Dispose of any resources that can be recreated.
     }
     
-    func tap(recognizer: UIGestureRecognizer) {
+    @objc func tap(_ recognizer: UIGestureRecognizer) {
         print("tap")
     }
 

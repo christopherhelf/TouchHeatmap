@@ -10,6 +10,34 @@ import Foundation
 import UIKit
 import Accelerate
 
+extension CGImage {
+    func colors(at: [CGPoint]) -> [UIColor]? {
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bytesPerPixel = 4
+        let bytesPerRow = bytesPerPixel * width
+        let bitsPerComponent = 8
+        let bitmapInfo: UInt32 = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+        
+        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: bitsPerComponent, bytesPerRow: bytesPerRow, space: colorSpace, bitmapInfo: bitmapInfo),
+            let ptr = context.data?.assumingMemoryBound(to: UInt8.self) else {
+                return nil
+        }
+        
+        context.draw(self, in: CGRect(x: 0, y: 0, width: width, height: height))
+        
+        return at.map { p in
+            let i = bytesPerRow * Int(p.y) + bytesPerPixel * Int(p.x)
+            
+            let a = CGFloat(ptr[i + 3]) / 255.0
+            let r = (CGFloat(ptr[i]) / a) / 255.0
+            let g = (CGFloat(ptr[i + 1]) / a) / 255.0
+            let b = (CGFloat(ptr[i + 2]) / a) / 255.0
+            
+            return UIColor(red: r, green: g, blue: b, alpha: a)
+        }
+    }
+}
+
 class TouchHeatmapRenderer {
     
     class func renderTouches(image: UIImage, touches: [TouchHeatmap.Touch]) -> (UIImage,Bool) {
@@ -22,18 +50,18 @@ class TouchHeatmapRenderer {
 
         // Create the Density Matrix
         let count = Int(width*height)
-        var density = [Float](count: count, repeatedValue: 0.0)
-        var touchDensity = self.createTouchSquare(touchradius)
+        var density = [Float](repeating: 0.0, count: count)
+        var touchDensity = self.createTouchSquare(radius: touchradius)
         
         // Iterate through all touches
         for touch in touches {
             
             // Add the touch square at the touch location
-            self.addTouchSquareToDensity(&density, width: Int(width), height: Int(height), touchDensity: &touchDensity, radius: Int(touchradius), center: touch.point)
+            self.addTouchSquareToDensity(density: &density, width: Int(width), height: Int(height), touchDensity: &touchDensity, radius: Int(touchradius), center: touch.point)
         }
         
         // Normalize between zero and one
-        let maxDensity = max(density)
+        let maxDensity = max(x: density)
         
         // Density Check if we have no touches
         if maxDensity == 0.0 {
@@ -41,45 +69,44 @@ class TouchHeatmapRenderer {
         }
         
         // Create the RGBA matrix
-        var rgba = [UInt8](count: count*4, repeatedValue: 0)
+        var rgba = [UInt8](repeating: 0, count: count*4)
         
         // Render Density Info into raw RGBA pixels
-        self.renderDensityMatrix(&density, rgba: &rgba, width: Int(width), height: Int(height), max: maxDensity)
+        self.renderDensityMatrix(density: &density, rgba: &rgba, width: Int(width), height: Int(height), max: maxDensity)
         
         // Clear matrices
         density.removeAll()
         touchDensity.removeAll()
         
         // Generate UIImage from RGB data
-        let touchImage = self.generateImageFromRGBAMatrix(&rgba, width: Int(width), height: Int(height))
+        let touchImage = self.generateImageFromRGBAMatrix(rgba: &rgba, width: Int(width), height: Int(height))
         return (touchImage,true)
     }
     
-    private class func generateImageFromRGBAMatrix(inout rgba: [UInt8], width: Int, height: Int) -> UIImage {
+    private class func generateImageFromRGBAMatrix( rgba: inout [UInt8], width: Int, height: Int) -> UIImage {
         
         let colorSpace = CGColorSpaceCreateDeviceRGB();
-        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.PremultipliedLast.rawValue | CGBitmapInfo.ByteOrderDefault.rawValue)
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue)
         
-        let bitmapContext = CGBitmapContextCreate(&rgba,
-            width,
-            height,
-            8, // bitsPerComponent
-            4 * width, // bytesPerRow
-            colorSpace,
-            bitmapInfo.rawValue);
+        let bitmapContext = CGContext(data: &rgba,
+                                      width: width,
+                                      height: height,
+                                      bitsPerComponent: 8, // bitsPerComponent
+            bytesPerRow: 4 * width, // bytesPerRow
+            space: colorSpace,
+            bitmapInfo: bitmapInfo.rawValue);
         
-        let cgImage = CGBitmapContextCreateImage(bitmapContext);
-        let image = UIImage(CGImage: cgImage!)
+        let cgImage = bitmapContext!.makeImage();
+        let image = UIImage(cgImage: cgImage!)
         return image
     }
     
-    private class func renderDensityMatrix(inout density: [Float], inout rgba: [UInt8], width: Int, height: Int, max: Float) {
+    private class func renderDensityMatrix( density: inout [Float], rgba: inout [UInt8], width: Int, height: Int, max: Float) {
         
         let bytesPerRow = 4 * width
         
-        for(var x = 0; x < width; x++) {
-            for(var y = 0; y < height; y++) {
-                
+        for x in stride(from: 0, to: width, by: 1) {
+            for y in stride(from: 0, to: height, by: 1) {
                 // Get the density index
                 let densityIndex = width * y + x
                 
@@ -94,7 +121,7 @@ class TouchHeatmapRenderer {
                 // Get the Byteindex of the rgba data
                 let byteIndex = (bytesPerRow * y) + x * 4
                 
-                // Set the color values     
+                // Set the color values
                 rgba[byteIndex] = UInt8(densityValue * 255)
                 rgba[byteIndex+3] = rgba[byteIndex]
                 
@@ -112,8 +139,6 @@ class TouchHeatmapRenderer {
             }
         }
         
-        
-        
     }
     
     private class func max(x: [Float]) -> Float {
@@ -128,14 +153,14 @@ class TouchHeatmapRenderer {
         return result
     }
     
-    private class func addTouchSquareToDensity(inout density: [Float], width: Int, height: Int, inout touchDensity: [Float], radius: Int, center: CGPoint) {
+    private class func addTouchSquareToDensity( density: inout [Float], width: Int, height: Int, touchDensity: inout [Float], radius: Int, center: CGPoint) {
         
         let centerX = Int(center.x)
         let centerY = Int(center.y)
         
-        for(var x = 0; x < radius; x++) {
-            for(var y = 0; y < radius; y++) {
-                
+        for x in stride(from: 0, to: radius, by: 1) {
+            for y in stride(from: 0, to: radius, by: 1) {
+
                 let densityX = centerX - radius/2 + x
                 let densityY = centerY - radius/2 + y
                 
@@ -170,31 +195,32 @@ class TouchHeatmapRenderer {
         parameters["inputColor1"] = outerColor
         parameters["inputRadius"] = radius-radius/2 as NSNumber
         
-        let filter = CIFilter(name: "CIGaussianGradient", withInputParameters: parameters)!
+        let filter = CIFilter(name: "CIGaussianGradient", parameters: parameters)!
         var ciImage = filter.outputImage!
         
         // Now crop, as we have infinite dimensions
-        let cropRect = CGRectMake(0.0, 0.0, radius, radius);
+        let cropRect = CGRect(origin: CGPoint(x: 0,y :0), size: CGSize(width: radius, height: radius))
         var cropParameters = [String : AnyObject]()
         cropParameters["inputImage"] = ciImage
-        cropParameters["inputRectangle"] = CIVector(CGRect: cropRect)
-        ciImage = CIFilter(name: "CICrop", withInputParameters: cropParameters)!.outputImage!
+        cropParameters["inputRectangle"] = CIVector(cgRect: cropRect)
+        ciImage = CIFilter(name: "CICrop", parameters: cropParameters)!.outputImage!
         
         // Create the CGImage
         let ctx = CIContext(options:nil)
-        let cgImage = ctx.createCGImage(ciImage, fromRect:ciImage.extent)
+        let cgImage = ctx.createCGImage(ciImage, from:ciImage.extent)
         
-        // Get the Pixel Data
-        let pixelData = CGDataProviderCopyData(CGImageGetDataProvider(cgImage))
+        // Get the Pixel Data //
+        let pixelData = cgImage?.dataProvider?.data
         let data: UnsafePointer<UInt8> = CFDataGetBytePtr(pixelData)
-        
+                
         // Set the Pixel Data in the Array
         let radiusInt = Int(radius)
         let count = radius*radius
-        var density = [Float](count: Int(count), repeatedValue: 0.0)
+        var density = [Float](repeating: 0.0, count: Int(count))
         
-        for(var x = 0; x < radiusInt; x++) {
-            for(var y = 0; y < radiusInt; y++) {
+        for x in stride(from: 0, to: radiusInt, by: 1) {
+            for y in stride(from: 0, to: radiusInt, by: 1) {
+
                 
                 // Get the Pixel Info in the Red Channel
                 let pixelInfo: Int = ((radiusInt * y) + x) * 4
@@ -206,10 +232,7 @@ class TouchHeatmapRenderer {
                 
             }
         }
-        
         return density
-        
     }
-    
     
 }
