@@ -13,10 +13,10 @@
 		9DF1BEEA1BB745B7009A45E9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9DF1BEE91BB745B7009A45E9 /* Assets.xcassets */; };
 		9DF1BEED1BB745B7009A45E9 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9DF1BEEB1BB745B7009A45E9 /* LaunchScreen.storyboard */; };
 		9DF1BEF81BB745B7009A45E9 /* TouchHeatmapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DF1BEF71BB745B7009A45E9 /* TouchHeatmapTests.swift */; };
-		9DF1BF031BB745CD009A45E9 /* TouchHeatmap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DF1BF021BB745CD009A45E9 /* TouchHeatmap.swift */; settings = {ASSET_TAGS = (); }; };
-		9DF1BF071BB7512E009A45E9 /* ViewController2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DF1BF061BB7512E009A45E9 /* ViewController2.swift */; settings = {ASSET_TAGS = (); }; };
-		9DF1BF091BB75ECD009A45E9 /* TouchHeatmapExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DF1BF081BB75ECD009A45E9 /* TouchHeatmapExtensions.swift */; settings = {ASSET_TAGS = (); }; };
-		9DF1BF261BBA8278009A45E9 /* TouchHeatmapRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DF1BF251BBA8278009A45E9 /* TouchHeatmapRenderer.swift */; settings = {ASSET_TAGS = (); }; };
+		9DF1BF031BB745CD009A45E9 /* TouchHeatmap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DF1BF021BB745CD009A45E9 /* TouchHeatmap.swift */; };
+		9DF1BF071BB7512E009A45E9 /* ViewController2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DF1BF061BB7512E009A45E9 /* ViewController2.swift */; };
+		9DF1BF091BB75ECD009A45E9 /* TouchHeatmapExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DF1BF081BB75ECD009A45E9 /* TouchHeatmapExtensions.swift */; };
+		9DF1BF261BBA8278009A45E9 /* TouchHeatmapRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DF1BF251BBA8278009A45E9 /* TouchHeatmapRenderer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -354,6 +354,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.TouchHeatmap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 4.2;
 			};
 			name = Debug;
 		};
@@ -366,6 +367,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.TouchHeatmap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 4.2;
 			};
 			name = Release;
 		};
